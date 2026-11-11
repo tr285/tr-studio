@@ -1,0 +1,105 @@
+name: TR STUDIO CI Pipeline
+
+on:
+  push:
+    branches: [main, master, release/*]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend-checks:
+    name: Backend Tests & Linting
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: trstudio
+          POSTGRES_PASSWORD: trstudio_dev_password_change_me
+          POSTGRES_DB: trstudio_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install system dependencies (FFmpeg & libpq)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libpq-dev
+
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: postgresql+psycopg://trstudio:trstudio_dev_password_change_me@localhost:5432/trstudio_db
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run Pytest test suite
+        env:
+          DATABASE_URL: postgresql+psycopg://trstudio:trstudio_dev_password_change_me@localhost:5432/trstudio_db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test_secret_key_for_continuous_integration_pipeline_only_64_chars
+          ENVIRONMENT: test
+        run: |
+          cd backend
+          pytest -v
+
+  frontend-checks:
+    name: Frontend Typecheck, Animation Engine & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install root and workspace npm dependencies
+        run: npm ci
+
+      - name: Test Animation Engine package
+        run: node --experimental-strip-types --test packages/animation-engine/tests/engine.test.ts
+
+      - name: TypeScript typecheck across monorepo
+        run: npm run typecheck
+
+      - name: Next.js Production Build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+          NEXT_PUBLIC_API_V1_URL: http://localhost:8000/api/v1
+        run: npm run build:web

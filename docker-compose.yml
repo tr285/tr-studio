@@ -1,0 +1,100 @@
+# ==============================================================================
+# TR STUDIO — Docker Compose Development & Infrastructure Stack
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build -d
+# ==============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tr-studio-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-trstudio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trstudio_dev_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-trstudio_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - tr_studio_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-trstudio} -d $${POSTGRES_DB:-trstudio_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: tr-studio-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - tr_studio_redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: tr-studio-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-trstudio}:${POSTGRES_PASSWORD:-trstudio_dev_password_change_me}@postgres:5432/${POSTGRES_DB:-trstudio_db}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-replace_with_a_secure_64_character_hex_secret_key_for_jwt_signing}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      STORAGE_LOCAL_DIR: /storage
+    volumes:
+      - tr_studio_storage:/storage
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_V1_URL: ${NEXT_PUBLIC_API_V1_URL:-http://localhost:8000/api/v1}
+    container_name: tr-studio-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_V1_URL: ${NEXT_PUBLIC_API_V1_URL:-http://localhost:8000/api/v1}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  tr_studio_postgres_data:
+  tr_studio_redis_data:
+  tr_studio_storage:

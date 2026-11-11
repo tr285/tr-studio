@@ -1,0 +1,32 @@
+{
+  "name": "TR STUDIO — Imagine Anything. Create Everything.",
+  "short_name": "TR STUDIO",
+  "description": "Professional 2D Animation Engine, Story Studio, Multi-Track Timeline, Voice & Video Rendering Suite.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07070a",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["multimedia", "productivity", "graphics", "entertainment"]
+}

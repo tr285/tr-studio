@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* TR STUDIO — Professional Dark Charcoal & Violet Theme */
+    color-scheme: dark;
+    --background: 240 12% 4%;
+    --foreground: 240 10% 97%;
+    --card: 240 12% 7%;
+    --card-foreground: 240 10% 97%;
+    --popover: 240 12% 7%;
+    --popover-foreground: 240 10% 97%;
+    --primary: 263 85% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 9% 13%;
+    --secondary-foreground: 240 8% 92%;
+    --muted: 240 9% 13%;
+    --muted-foreground: 240 6% 64%;
+    --accent: 268 83% 58%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 74% 56%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 8% 16%;
+    --input: 240 8% 16%;
+    --ring: 263 85% 64%;
+    --radius: 0.75rem;
+
+    /* Native UI & scrollbar adaptation */
+    --scrollbar-track: #0d0d12;
+    --scrollbar-thumb: #3b384a;
+    accent-color: hsl(263 85% 64%);
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-violet-500/30 selection:text-violet-100;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Native modal dialog scroll containment per Modern Web Guidance */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(6, 6, 10, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+/* Visually hidden helper for screen reader announcements */
+.visually-hidden {
+  position: absolute;
+  clip-path: inset(50%);
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+}

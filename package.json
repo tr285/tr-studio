@@ -1,0 +1,20 @@
+{
+  "name": "tr-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TR STUDIO — AI-Powered Animated Story Creation Platform Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace=@tr-studio/web run dev",
+    "build:web": "npm --workspace=@tr-studio/web run build",
+    "start:web": "npm --workspace=@tr-studio/web run start",
+    "lint:web": "npm --workspace=@tr-studio/web run lint",
+    "typecheck": "npm --workspace=@tr-studio/web run typecheck"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

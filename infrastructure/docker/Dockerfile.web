@@ -1,0 +1,49 @@
+# ==============================================================================
+# TR STUDIO — Next.js Frontend Dockerfile (Step 10 Production Hardened)
+# ==============================================================================
+FROM node:22-alpine AS base
+
+FROM base AS deps
+WORKDIR /app
+COPY package.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY packages/scene-schema/package.json ./packages/scene-schema/
+COPY packages/editor-engine/package.json ./packages/editor-engine/
+COPY packages/animation-engine/package.json ./packages/animation-engine/
+COPY packages/ui/package.json ./packages/ui/
+RUN npm install
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_API_V1_URL=http://localhost:8000/api/v1
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_API_V1_URL=${NEXT_PUBLIC_API_V1_URL}
+
+RUN npm --workspace=@tr-studio/web run build
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=3000
+
+# Create unprivileged system user
+RUN addgroup -g 10001 -S nodejs && \
+    adduser -S nextjs -u 10001 -G nodejs
+
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+CMD ["node", "apps/web/server.js"]

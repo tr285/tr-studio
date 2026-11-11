@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@tr-studio/shared-types": ["../../packages/shared-types/src/index.ts"],
+      "@tr-studio/scene-schema": ["../../packages/scene-schema/src/index.ts"],
+      "@tr-studio/editor-engine": ["../../packages/editor-engine/src/index.ts"],
+      "@tr-studio/animation-engine": ["../../packages/animation-engine/src/index.ts"],
+      "@tr-studio/ui": ["../../packages/ui/src/index.ts"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
