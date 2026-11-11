@@ -85,6 +85,12 @@ const API_BASE_URL =
 const API_V1_URL =
   process.env.NEXT_PUBLIC_API_V1_URL?.replace(/\/$/, "") || `${API_BASE_URL}/api/v1`;
 
+if (typeof window !== "undefined" && process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_API_URL) {
+  console.warn(
+    "[TR STUDIO] Warning: NEXT_PUBLIC_API_URL is not configured. Requests will default to http://localhost:8000. Please set NEXT_PUBLIC_API_URL in your Vercel or hosting environment variables."
+  );
+}
+
 export function resolveMediaUrl(url?: string | null): string {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
@@ -139,10 +145,22 @@ async function request<T>(
   }
 
   const base = useRootUrl ? API_BASE_URL : API_V1_URL;
-  const response = await fetch(`${base}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${base}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (netErr) {
+    const errorMsg =
+      netErr instanceof Error ? netErr.message : "Network request failed";
+    throw new ApiClientError(
+      `Cannot connect to backend server at ${base}. If using free hosting (e.g. Render), the server may be waking up from sleep (takes ~50-80s on the first request). Please wait a moment and refresh. (${errorMsg})`,
+      503,
+      "BACKEND_OFFLINE"
+    );
+  }
 
   if (response.status === 204) {
     return undefined as T;
@@ -156,6 +174,13 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 503) {
+      throw new ApiClientError(
+        "Backend service unavailable (HTTP 503). Ensure FastAPI, PostgreSQL, and Redis are running and that NEXT_PUBLIC_API_URL points to the deployed backend.",
+        503,
+        "SERVICE_UNAVAILABLE"
+      );
+    }
     const detail =
       typeof data.detail === "string"
         ? data.detail

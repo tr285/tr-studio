@@ -20,9 +20,11 @@ from __future__ import annotations
 
 import abc
 import json
+import random
 import re
+import time
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 from pydantic import ValidationError
@@ -445,6 +447,14 @@ class AIStoryProvider(abc.ABC):
             "expand_story": "Expand worldbuilding, scene descriptions, character relationships, and dramatic beats with richer detail.",
             "improve_character": "Deepen character personalities, distinct voice patterns, motivations, and interpersonal dynamics.",
             "add_detailed_scenes": "Enrich every scene with more granular action beats, storyboard notes, camera framing, and sound design.",
+            "generate_screenplay": "Generate complete production-ready screenplay scenes, action staging, and spoken dialogue across all acts.",
+            "generate_scene_breakdown": "Break the story into a granular scene-by-scene progression with sluglines, camera framing, and action beats.",
+            "generate_dialogue": "Write natural, expressive character dialogue and emotional delivery notes for each scene.",
+            "generate_narration": "Compose cinematic voiceover narration reflecting the narrative tone and thematic arcs.",
+            "regenerate_story": "Completely regenerate and elevate all 3 acts, characters, locations, and scenes based on the core idea.",
+            "expand_idea": "Substantially expand worldbuilding lore, character backstories, and thematic complexity.",
+            "generate_title": "Generate and assign a captivating, highly memorable animated film title.",
+            "alternative_endings": "Propose an alternative climax and resolution that delivers a powerful, unexpected resolution.",
         }
         base_directive = action_prompts.get(
             request.action,
@@ -510,20 +520,21 @@ class AIStoryProvider(abc.ABC):
 
 
 class GeminiStoryProvider(AIStoryProvider):
-    """Real Google Gemini API integration via REST (`generateContent`)."""
+    """Real Google Gemini API integration via REST (`generateContent`) with free-tier controls & retries."""
 
     def _complete_json(self, system_prompt: str, user_prompt: str) -> Dict[str, Any] | str:
         api_key = (self.settings.AI_API_KEY or "").strip()
         if not api_key:
             raise AIConfigurationException()
 
-        model = self.settings.AI_MODEL or "gemini-2.5-flash"
+        model = self.settings.AI_MODEL or "gemini-2.0-flash"
         base_url = (
             self.settings.AI_BASE_URL
             or "https://generativelanguage.googleapis.com/v1beta"
         ).rstrip("/")
         url = f"{base_url}/models/{model}:generateContent"
 
+        max_tokens = getattr(self.settings, "AI_MAX_OUTPUT_TOKENS", 8192)
         payload = {
             "systemInstruction": {
                 "parts": [{"text": system_prompt}],
@@ -537,52 +548,164 @@ class GeminiStoryProvider(AIStoryProvider):
             "generationConfig": {
                 "temperature": 0.7,
                 "responseMimeType": "application/json",
+                "maxOutputTokens": max_tokens,
             },
         }
 
-        try:
-            with httpx.Client(timeout=self.settings.AI_TIMEOUT_SECONDS) as client:
-                response = client.post(
-                    url,
-                    params={"key": api_key},
-                    json=payload,
-                )
-        except httpx.TimeoutException as exc:
-            raise AIProviderException(
-                detail="AI provider request timed out. Please try again or reduce story duration.",
-                status_code=504,
-                error_code="AI_TIMEOUT",
-            ) from exc
-        except httpx.RequestError as exc:
-            raise AIProviderException(
-                detail=f"Network error communicating with Gemini API: {exc}",
-                status_code=502,
-                error_code="AI_NETWORK_ERROR",
-            ) from exc
+        # Secure headers: pass API key via x-goog-api-key header to avoid leaking in proxy logs
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key,
+        }
 
-        if response.status_code == 429:
+        max_retries = max(1, getattr(self.settings, "AI_MAX_RETRIES", 3))
+        base_delay = getattr(self.settings, "AI_RETRY_DELAY_SECONDS", 2.0)
+
+        response: Optional[httpx.Response] = None
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                with httpx.Client(timeout=self.settings.AI_TIMEOUT_SECONDS) as client:
+                    response = client.post(
+                        url,
+                        headers=headers,
+                        params={"key": api_key},
+                        json=payload,
+                    )
+            except httpx.TimeoutException as exc:
+                if attempt < max_retries:
+                    jitter = random.uniform(0.5, 1.5)
+                    time.sleep(base_delay * attempt + jitter)
+                    continue
+                raise AIProviderException(
+                    detail="AI provider request timed out. Please try again or reduce story duration.",
+                    status_code=504,
+                    error_code="AI_TIMEOUT",
+                ) from exc
+            except httpx.RequestError as exc:
+                if attempt < max_retries:
+                    jitter = random.uniform(0.5, 1.5)
+                    time.sleep(base_delay * attempt + jitter)
+                    continue
+                raise AIProviderException(
+                    detail=f"Network error communicating with Gemini API: {exc}",
+                    status_code=502,
+                    error_code="AI_NETWORK_ERROR",
+                ) from exc
+
+            # Check for permanent client authentication errors (never retry)
+            if response.status_code in (401, 403):
+                raise AIProviderException(
+                    detail="AI provider rejected the configured AI_API_KEY (authentication failed).",
+                    status_code=502,
+                    error_code="AI_AUTH_FAILED",
+                )
+
+            # Check for model not found / bad argument (never retry)
+            if response.status_code == 400:
+                err_text = response.text[:400]
+                if "not found" in err_text.lower():
+                    raise AIProviderException(
+                        detail=f"Configured Gemini model '{model}' was not found in your Google AI Studio project. Please verify AI_MODEL.",
+                        status_code=400,
+                        error_code="AI_MODEL_NOT_FOUND",
+                    )
+                raise AIProviderException(
+                    detail=f"Gemini API rejected request: {err_text}",
+                    status_code=400,
+                    error_code="AI_INVALID_REQUEST",
+                )
+
+            # Check for rate limiting / quota exhaustion
+            if response.status_code == 429:
+                resp_text = response.text
+                is_quota_exhausted = (
+                    "quota" in resp_text.lower()
+                    or "resource_exhausted" in resp_text.lower()
+                    or "exceeded your current quota" in resp_text.lower()
+                )
+                if is_quota_exhausted:
+                    raise AIProviderException(
+                        detail=(
+                            "Google Gemini free-tier quota has been exhausted. "
+                            "Please check your quota on Google AI Studio (https://aistudio.google.com/) or try again later."
+                        ),
+                        status_code=429,
+                        error_code="AI_QUOTA_EXHAUSTED",
+                    )
+
+                # Transient rate limit (RPM exceeded): retry with backoff if attempts remain
+                if attempt < max_retries:
+                    jitter = random.uniform(1.0, 2.5)
+                    time.sleep(base_delay * (2 ** attempt) + jitter)
+                    continue
+
+                raise AIProviderException(
+                    detail="AI provider rate limit exceeded (HTTP 429). Please wait a moment and try again.",
+                    status_code=429,
+                    error_code="AI_RATE_LIMITED",
+                )
+
+            # Check for 5xx upstream server errors (retryable)
+            if response.status_code >= 500:
+                if attempt < max_retries:
+                    jitter = random.uniform(0.5, 1.5)
+                    time.sleep(base_delay * attempt + jitter)
+                    continue
+                raise AIProviderException(
+                    detail=f"Gemini API upstream server error (HTTP {response.status_code}).",
+                    status_code=502,
+                    error_code="AI_UPSTREAM_ERROR",
+                )
+
+            if response.status_code >= 400:
+                raise AIProviderException(
+                    detail=f"Gemini API returned HTTP {response.status_code}: {response.text[:300]}",
+                    status_code=502,
+                    error_code="AI_UPSTREAM_ERROR",
+                )
+
+            # Success
+            break
+
+        if not response or not response.is_success:
             raise AIProviderException(
-                detail="AI provider rate limit exceeded (HTTP 429). Please wait a moment and try again.",
-                status_code=429,
-                error_code="AI_RATE_LIMITED",
-            )
-        if response.status_code in (401, 403):
-            raise AIProviderException(
-                detail="AI provider rejected the configured AI_API_KEY (authentication failed).",
+                detail="Gemini API request failed.",
                 status_code=502,
-                error_code="AI_AUTH_FAILED",
-            )
-        if response.status_code >= 400:
-            raise AIProviderException(
-                detail=f"Gemini API returned HTTP {response.status_code}: {response.text[:300]}",
-                status_code=502,
-                error_code="AI_UPSTREAM_ERROR",
+                error_code="AI_INVALID_RESPONSE",
             )
 
         data = response.json()
+
+        # Check prompt feedback for blocks
+        prompt_feedback = data.get("promptFeedback") or {}
+        if prompt_feedback.get("blockReason"):
+            raise AIProviderException(
+                detail=f"Gemini content filters blocked the prompt: {prompt_feedback.get('blockReason')}",
+                status_code=400,
+                error_code="AI_PROMPT_BLOCKED",
+            )
+
+        candidates = data.get("candidates") or []
+        if not candidates:
+            raise AIProviderException(
+                detail="Gemini API returned no candidates in response.",
+                error_code="AI_INVALID_RESPONSE",
+            )
+
+        candidate = candidates[0]
+        finish_reason = candidate.get("finishReason")
+        if finish_reason == "SAFETY":
+            raise AIProviderException(
+                detail="Gemini response was flagged by content safety filters.",
+                status_code=400,
+                error_code="AI_SAFETY_BLOCKED",
+            )
+        if finish_reason == "MAX_TOKENS":
+            logger.warning("Gemini response reached MAX_TOKENS limit.")
+
         try:
-            candidates = data.get("candidates") or []
-            text_part = candidates[0]["content"]["parts"][0]["text"]
+            text_part = candidate["content"]["parts"][0]["text"]
             return text_part
         except (IndexError, KeyError, TypeError) as exc:
             raise AIProviderException(

@@ -137,6 +137,46 @@ const AI_ASSISTANT_ACTIONS: {
     label: "Continue Story (+Scenes)",
     description: "Generate the next narrative scene continuation",
   },
+  {
+    action: "generate_screenplay",
+    label: "Generate Screenplay",
+    description: "Full scene beats, sluglines, and spoken character dialogue",
+  },
+  {
+    action: "generate_scene_breakdown",
+    label: "Generate Scene Breakdown",
+    description: "Structured scene-by-scene progression with camera staging",
+  },
+  {
+    action: "generate_dialogue",
+    label: "Generate Dialogue",
+    description: "Expressive character dialogue and delivery directions",
+  },
+  {
+    action: "generate_narration",
+    label: "Generate Narration",
+    description: "Atmospheric voiceover lines for visual storytelling",
+  },
+  {
+    action: "regenerate_story",
+    label: "Regenerate Entire Story",
+    description: "Fresh take on 3-act arcs, characters, and scenes",
+  },
+  {
+    action: "expand_idea",
+    label: "Expand Story Idea",
+    description: "Enrich premise, world lore, and narrative depth",
+  },
+  {
+    action: "generate_title",
+    label: "Generate Story Title",
+    description: "Create an evocative, cinematic title for your production",
+  },
+  {
+    action: "alternative_endings",
+    label: "Alternative Endings",
+    description: "Explore unexpected climaxes and memorable resolutions",
+  },
 ];
 
 function makeUuid(): string {

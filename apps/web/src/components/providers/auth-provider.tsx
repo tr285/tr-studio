@@ -9,6 +9,7 @@ import {
   getStoredToken,
   setStoredToken,
 } from "@/lib/api";
+import { neonAuthClient } from "@/lib/neon-auth";
 
 interface AuthContextValue {
   user: User | null;
@@ -51,6 +52,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (payload: { email: string; password: string }) => {
+      try {
+        await neonAuthClient.signIn.email({
+          email: payload.email,
+          password: payload.password,
+          callbackURL:
+            typeof window !== "undefined"
+              ? window.location.origin
+              : "http://localhost:3000",
+        });
+      } catch (neonErr) {
+        console.warn("[Neon Auth] Sign in sync notice:", neonErr);
+      }
       const res = await api.auth.login(payload);
       setStoredToken(res.access_token);
       setUser(res.user);
@@ -61,6 +74,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(
     async (payload: { email: string; username: string; password: string }) => {
+      try {
+        await neonAuthClient.signUp.email({
+          email: payload.email,
+          password: payload.password,
+          name: payload.username,
+          callbackURL:
+            typeof window !== "undefined"
+              ? window.location.origin
+              : "http://localhost:3000",
+        });
+      } catch (neonErr) {
+        console.warn("[Neon Auth] Sign up sync notice:", neonErr);
+      }
       const res = await api.auth.register(payload);
       setStoredToken(res.access_token);
       setUser(res.user);

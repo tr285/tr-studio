@@ -320,6 +320,14 @@ AIAssistantActionType = Literal[
     "translate_story",
     "continue_story",
     "summarize_story",
+    "generate_screenplay",
+    "generate_scene_breakdown",
+    "generate_dialogue",
+    "generate_narration",
+    "regenerate_story",
+    "expand_idea",
+    "generate_title",
+    "alternative_endings",
 ]
 
 

@@ -713,3 +713,154 @@ def test_manual_story_scene_crud_versioning_and_nondestructive_ai() -> None:
         ).status_code
         == 403
     )
+
+
+# ==============================================================================
+# 11. Specific Gemini Provider Unit & Resiliency Tests
+# ==============================================================================
+
+
+def test_gemini_provider_missing_key_raises_configuration_exception() -> None:
+    from app.core.config import Settings
+    from app.core.exceptions import AIConfigurationException
+
+    test_settings = Settings(
+        SECRET_KEY="test-secret-key-at-least-16-chars-long",
+        DATABASE_URL="sqlite:///:memory:",
+        AI_PROVIDER="gemini",
+        AI_API_KEY="",
+    )
+    provider = GeminiStoryProvider(test_settings)
+    with pytest.raises(AIConfigurationException):
+        provider._complete_json("System prompt", "User prompt")
+
+
+def test_gemini_provider_quota_exhausted_handling() -> None:
+    from app.core.config import Settings
+    from unittest.mock import MagicMock
+
+    test_settings = Settings(
+        SECRET_KEY="test-secret-key-at-least-16-chars-long",
+        DATABASE_URL="sqlite:///:memory:",
+        AI_PROVIDER="gemini",
+        AI_API_KEY="test-api-key-configured",
+        AI_MAX_RETRIES=1,
+    )
+    provider = GeminiStoryProvider(test_settings)
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 429
+    mock_resp.text = '{"error": {"code": 429, "message": "Quota exceeded for quota metric", "status": "RESOURCE_EXHAUSTED"}}'
+    mock_resp.is_success = False
+
+    with patch("httpx.Client.post", return_value=mock_resp):
+        with pytest.raises(AIProviderException) as exc_info:
+            provider._complete_json("System prompt", "User prompt")
+        assert exc_info.value.error_code == "AI_QUOTA_EXHAUSTED"
+        assert exc_info.value.status_code == 429
+
+
+def test_gemini_provider_auth_failure_handling() -> None:
+    from app.core.config import Settings
+    from unittest.mock import MagicMock
+
+    test_settings = Settings(
+        SECRET_KEY="test-secret-key-at-least-16-chars-long",
+        DATABASE_URL="sqlite:///:memory:",
+        AI_PROVIDER="gemini",
+        AI_API_KEY="invalid-key-xyz",
+        AI_MAX_RETRIES=1,
+    )
+    provider = GeminiStoryProvider(test_settings)
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 403
+    mock_resp.text = '{"error": {"code": 403, "message": "API key not valid."}}'
+    mock_resp.is_success = False
+
+    with patch("httpx.Client.post", return_value=mock_resp):
+        with pytest.raises(AIProviderException) as exc_info:
+            provider._complete_json("System prompt", "User prompt")
+        assert exc_info.value.error_code == "AI_AUTH_FAILED"
+        assert exc_info.value.status_code == 502
+
+
+def test_gemini_provider_safety_blocked_handling() -> None:
+    from app.core.config import Settings
+    from unittest.mock import MagicMock
+
+    test_settings = Settings(
+        SECRET_KEY="test-secret-key-at-least-16-chars-long",
+        DATABASE_URL="sqlite:///:memory:",
+        AI_PROVIDER="gemini",
+        AI_API_KEY="test-api-key-configured",
+        AI_MAX_RETRIES=1,
+    )
+    provider = GeminiStoryProvider(test_settings)
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.is_success = True
+    mock_resp.json.return_value = {
+        "candidates": [
+            {
+                "finishReason": "SAFETY",
+                "content": {"parts": [{"text": ""}]},
+            }
+        ]
+    }
+
+    with patch("httpx.Client.post", return_value=mock_resp):
+        with pytest.raises(AIProviderException) as exc_info:
+            provider._complete_json("System prompt", "User prompt")
+        assert exc_info.value.error_code == "AI_SAFETY_BLOCKED"
+
+
+def test_gemini_provider_extended_ai_actions() -> None:
+    token, _ = register_test_user("extended_actions_user")
+
+    # Generate a base story
+    with (
+        patch.object(settings, "AI_PROVIDER", "gemini"),
+        patch.object(settings, "AI_API_KEY", "mock-gemini-key"),
+        patch.object(
+            GeminiStoryProvider,
+            "_complete_json",
+            return_value=build_mock_ai_raw_json(),
+        ),
+    ):
+        gen_res = client.post(
+            "/api/v1/stories/generate",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"idea": "A fantasy quest in an enchanted clocktower with sky sailing."},
+        )
+        assert gen_res.status_code == 201
+        story_id = gen_res.json()["id"]
+
+        # Test generate_screenplay action
+        act_res = client.post(
+            f"/api/v1/stories/{story_id}/improve",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"action": "generate_screenplay", "apply_immediately": False},
+        )
+        assert act_res.status_code == 200
+        assert act_res.json()["action"] == "generate_screenplay"
+
+        # Test generate_dialogue action
+        dlg_res = client.post(
+            f"/api/v1/stories/{story_id}/improve",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"action": "generate_dialogue", "apply_immediately": False},
+        )
+        assert dlg_res.status_code == 200
+        assert dlg_res.json()["action"] == "generate_dialogue"
+
+        # Test generate_narration action
+        nar_res = client.post(
+            f"/api/v1/stories/{story_id}/improve",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"action": "generate_narration", "apply_immediately": False},
+        )
+        assert nar_res.status_code == 200
+        assert nar_res.json()["action"] == "generate_narration"
+

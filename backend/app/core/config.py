@@ -38,6 +38,17 @@ class Settings(BaseSettings):
 
     # PostgreSQL Database
     DATABASE_URL: str
+    DATABASE_URL_UNPOOLED: Optional[str] = None
+
+    @field_validator("DATABASE_URL", "DATABASE_URL_UNPOOLED", mode="before")
+    @classmethod
+    def normalize_database_url(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return v
+        cleaned = v.strip().strip('"').strip("'")
+        if cleaned.startswith("postgresql://"):
+            return cleaned.replace("postgresql://", "postgresql+psycopg://", 1)
+        return cleaned
 
     # Redis (prepared for future background jobs)
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -46,9 +57,13 @@ class Settings(BaseSettings):
     # Supported providers: "gemini", "openai", "openai_compatible"
     AI_PROVIDER: str = "gemini"
     AI_API_KEY: Optional[str] = None
-    AI_MODEL: str = "gemini-2.5-flash"
+    AI_MODEL: str = "gemini-2.0-flash"
     AI_BASE_URL: Optional[str] = None
     AI_TIMEOUT_SECONDS: float = 90.0
+    AI_MAX_OUTPUT_TOKENS: int = 8192
+    AI_MAX_RETRIES: int = 3
+    AI_RETRY_DELAY_SECONDS: float = 2.0
+    AI_USER_RATE_LIMIT_PER_MINUTE: int = 15
 
     # AI Character Image Generation Configuration (Step 3)
     # Supported providers: "gemini", "openai", "openai_compatible"

@@ -110,16 +110,16 @@ export default function CharactersLibraryPage() {
     <StudioShell>
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Hero Header */}
-        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-zinc-800/90 bg-gradient-to-br from-[#11111a] via-[#0d0d14] to-violet-950/20 p-6 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-6 shadow-xs sm:flex-row sm:items-center">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-600 dark:text-violet-300">
               <Users className="h-3.5 w-3.5" />
               TR STUDIO · Character Creation Studio
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Character Library & Visual Bible
             </h1>
-            <p className="max-w-2xl text-sm text-zinc-400">
+            <p className="max-w-2xl text-sm text-muted-foreground">
               Create, customize, generate, and manage original animated
               characters with persistent visual styles, turnaround sheets,
               expressions, poses, and outfits across your stories.
@@ -137,9 +137,9 @@ export default function CharactersLibraryPage() {
         </div>
 
         {/* Filter & Search Bar */}
-        <div className="grid gap-3 rounded-2xl border border-zinc-800/90 bg-[#0d0d14] p-4 sm:grid-cols-12">
+        <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-2xs sm:grid-cols-12">
           <div className="relative sm:col-span-4">
-            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               aria-label="Search characters by name or appearance"
               placeholder="Search characters by name, role, or traits..."
@@ -154,7 +154,7 @@ export default function CharactersLibraryPage() {
               aria-label="Filter by character role"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 text-xs text-zinc-200"
+              className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="all">All Character Roles</option>
               {CHARACTER_ROLES.map((r) => (
@@ -170,7 +170,7 @@ export default function CharactersLibraryPage() {
               aria-label="Filter by visual style"
               value={styleFilter}
               onChange={(e) => setStyleFilter(e.target.value)}
-              className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 text-xs text-zinc-200"
+              className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="all">All Visual Styles</option>
               {CHARACTER_VISUAL_STYLES.map((s) => (
@@ -186,7 +186,7 @@ export default function CharactersLibraryPage() {
               aria-label="Filter by project"
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 text-xs text-zinc-200"
+              className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">All Projects</option>
               {projects.map((p) => (
@@ -199,9 +199,9 @@ export default function CharactersLibraryPage() {
         </div>
 
         {aiStatus && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-2.5 text-xs text-zinc-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-xs text-muted-foreground">
             <span>
-              <strong className="text-zinc-200">AI Image Engine Status:</strong>{" "}
+              <strong className="text-foreground">AI Image Engine Status:</strong>{" "}
               {aiStatus.message}
             </span>
             <Badge variant={aiStatus.configured ? "default" : "secondary"}>
@@ -215,7 +215,7 @@ export default function CharactersLibraryPage() {
         {error && (
           <div
             role="alert"
-            className="rounded-xl border border-red-500/40 bg-red-950/20 p-4 text-sm text-red-200"
+            className="rounded-xl border border-red-500/40 bg-red-950/20 p-4 text-sm text-red-600 dark:text-red-200"
           >
             {error}
           </div>
@@ -225,21 +225,21 @@ export default function CharactersLibraryPage() {
           <div
             role="status"
             aria-live="polite"
-            className="flex min-h-[300px] flex-col items-center justify-center gap-3 text-zinc-400"
+            className="flex min-h-[300px] flex-col items-center justify-center gap-3 text-muted-foreground"
           >
-            <Loader2 className="h-6 w-6 animate-spin text-violet-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <p className="text-sm">Loading characters...</p>
           </div>
         ) : characters.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-800 bg-[#0d0d14]/70 p-12 text-center space-y-4">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/15 text-violet-400">
+          <div className="rounded-2xl border border-dashed border-border bg-card/60 p-12 text-center space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/10 text-primary">
               <Sparkles className="h-6 w-6" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-bold text-foreground">
                 No Characters in Library Yet
               </h2>
-              <p className="mx-auto max-w-md text-xs text-zinc-400">
+              <p className="mx-auto max-w-md text-xs text-muted-foreground">
                 Create your first character manually, generate one with AI,
                 upload your own reference artwork, or import characters from a
                 story in the Story Studio.
@@ -261,12 +261,12 @@ export default function CharactersLibraryPage() {
               return (
                 <article
                   key={char.id}
-                  className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-zinc-800/90 bg-[#0d0d14] transition-all hover:border-violet-500/50"
+                  className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/50 hover:shadow-xs"
                 >
                   <div>
                     <Link
                       href={`/characters/${char.id}`}
-                      className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-950"
+                      className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted/60"
                     >
                       {imgUrl ? (
                         <img
@@ -275,8 +275,8 @@ export default function CharactersLibraryPage() {
                           className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : (
-                        <div className="flex flex-col items-center gap-2 text-zinc-500">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/10 text-lg font-bold text-violet-300">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-lg font-bold text-primary">
                             {char.name.slice(0, 2).toUpperCase()}
                           </div>
                           <span className="text-[11px]">
@@ -298,11 +298,11 @@ export default function CharactersLibraryPage() {
                       <div>
                         <Link
                           href={`/characters/${char.id}`}
-                          className="text-base font-bold text-white hover:text-violet-300"
+                          className="text-base font-bold text-foreground hover:text-primary transition-colors"
                         >
                           {char.name}
                         </Link>
-                        <p className="text-xs text-zinc-400">
+                        <p className="text-xs text-muted-foreground">
                           {char.species}
                           {char.age_description
                             ? ` · ${char.age_description}`
@@ -311,45 +311,45 @@ export default function CharactersLibraryPage() {
                       </div>
 
                       {char.appearance_description && (
-                        <p className="line-clamp-2 text-xs text-zinc-400">
+                        <p className="line-clamp-2 text-xs text-muted-foreground">
                           {char.appearance_description}
                         </p>
                       )}
 
-                      <div className="grid grid-cols-4 gap-1.5 pt-1 text-center text-[10px] text-zinc-400">
+                      <div className="grid grid-cols-4 gap-1.5 pt-1 text-center text-[10px] text-muted-foreground">
                         <Link
                           href={`/characters/${char.id}/design`}
-                          className="rounded-lg border border-zinc-800/80 bg-zinc-900/50 py-1.5 hover:border-violet-500/40 hover:text-white"
+                          className="rounded-lg border border-border bg-muted/40 py-1.5 hover:border-primary/40 hover:text-foreground transition-colors"
                         >
-                          <Palette className="mx-auto mb-0.5 h-3 w-3 text-violet-400" />
+                          <Palette className="mx-auto mb-0.5 h-3 w-3 text-primary" />
                           {char.asset_count} Assets
                         </Link>
                         <Link
                           href={`/characters/${char.id}/expressions`}
-                          className="rounded-lg border border-zinc-800/80 bg-zinc-900/50 py-1.5 hover:border-violet-500/40 hover:text-white"
+                          className="rounded-lg border border-border bg-muted/40 py-1.5 hover:border-primary/40 hover:text-foreground transition-colors"
                         >
-                          <Smile className="mx-auto mb-0.5 h-3 w-3 text-amber-400" />
+                          <Smile className="mx-auto mb-0.5 h-3 w-3 text-amber-500 dark:text-amber-400" />
                           {char.expression_count} Expr
                         </Link>
                         <Link
                           href={`/characters/${char.id}/poses`}
-                          className="rounded-lg border border-zinc-800/80 bg-zinc-900/50 py-1.5 hover:border-violet-500/40 hover:text-white"
+                          className="rounded-lg border border-border bg-muted/40 py-1.5 hover:border-primary/40 hover:text-foreground transition-colors"
                         >
-                          <Layers className="mx-auto mb-0.5 h-3 w-3 text-emerald-400" />
+                          <Layers className="mx-auto mb-0.5 h-3 w-3 text-emerald-500 dark:text-emerald-400" />
                           {char.pose_count} Poses
                         </Link>
                         <Link
                           href={`/characters/${char.id}/outfits`}
-                          className="rounded-lg border border-zinc-800/80 bg-zinc-900/50 py-1.5 hover:border-violet-500/40 hover:text-white"
+                          className="rounded-lg border border-border bg-muted/40 py-1.5 hover:border-primary/40 hover:text-foreground transition-colors"
                         >
-                          <Shirt className="mx-auto mb-0.5 h-3 w-3 text-sky-400" />
+                          <Shirt className="mx-auto mb-0.5 h-3 w-3 text-sky-500 dark:text-sky-400" />
                           {char.outfit_count} Outfits
                         </Link>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-zinc-800/80 px-4 py-2.5">
+                  <div className="flex items-center justify-between border-t border-border px-4 py-2.5">
                     <Button asChild size="sm" variant="outline" className="h-7 text-xs">
                       <Link href={`/characters/${char.id}`}>
                         Open Character Studio
@@ -360,7 +360,7 @@ export default function CharactersLibraryPage() {
                         type="button"
                         title="Create Character Variation"
                         onClick={() => handleDuplicateVariation(char)}
-                        className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
@@ -368,7 +368,7 @@ export default function CharactersLibraryPage() {
                         type="button"
                         aria-label={`Delete ${char.name}`}
                         onClick={() => handleDeleteCharacter(char.id)}
-                        className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-red-400"
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

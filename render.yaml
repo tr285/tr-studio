@@ -1,0 +1,42 @@
+# ==============================================================================
+# TR STUDIO — Render Infrastructure Blueprint (₹0 Free Tier)
+# Use this blueprint to deploy the FastAPI + FFmpeg backend to Render with 1-click.
+# Docs: https://render.com/docs/blueprint-spec
+# ==============================================================================
+
+services:
+  - type: web
+    name: tr-studio-api
+    runtime: docker
+    plan: free
+    region: oregon # or frankfurt, singapore, ohio
+    dockerfilePath: infrastructure/docker/Dockerfile.backend
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: BACKEND_HOST
+        value: 0.0.0.0
+      - key: BACKEND_PORT
+        value: "8000"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false # Set to your Neon PostgreSQL connection string: postgresql+psycopg://user:pass@ep-xyz.neon.tech/trstudio_db?sslmode=require
+      - key: CORS_ORIGINS
+        sync: false # Set to your Vercel deployment URL: https://tr-studio.vercel.app,https://yourdomain.com
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_MODEL
+        value: gemini-2.0-flash
+      - key: AI_API_KEY
+        sync: false # Optional: Google AI Studio API key
+      - key: STORAGE_BACKEND
+        value: local
+      - key: STORAGE_LOCAL_DIR
+        value: /storage

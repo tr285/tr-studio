@@ -6,6 +6,6 @@
   "types": "./src/index.ts",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node --experimental-strip-types --test tests/engine.test.ts"
   }
 }
